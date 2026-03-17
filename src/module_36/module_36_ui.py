@@ -437,57 +437,68 @@ def render_triggers_tab():
     st.markdown("### ⚡ Triggers & Views (DBMS Concepts)")
 
     st.markdown("#### 1. Trigger: Auto-Update Confidence on Feedback")
-    st.markdown("*In SQL, this would be `CREATE TRIGGER`. In MongoDB, we implement it as a post-insert hook.*")
+    st.markdown("*In SQL, this would be `CREATE TRIGGER`. In MongoDB, we implement it as a post-insert hook in `service.py`.*")
     st.code("""
-# TRIGGER EQUIVALENT: After INSERT on Feedback
-# Automatically update SimilarityMatch.confidence_score
+# ─── TRIGGER EQUIVALENT (from service.py) ───
+# After INSERT on Feedback → automatically UPDATE SimilarityMatch.confidence_score
 
-def submit_feedback(match_id, is_useful, doctor_comments):
+def submit_feedback(match_id, is_useful, doctor_comments="", survival_rate=None):
     db = get_db()
-    
+
+    # Auto-generate next feedback_id
+    last = db.feedback.find_one(sort=[("feedback_id", -1)])
+    next_id = (last["feedback_id"] + 1) if last else 1
+
     # 1. INSERT into feedback collection
     db.feedback.insert_one({
+        "feedback_id": next_id,
         "match_id": match_id,
         "is_useful": is_useful,
+        "survival_rate": survival_rate,
         "doctor_comments": doctor_comments,
         "created_at": datetime.utcnow()
     })
-    
-    # 2. TRIGGER: Auto-compute AVG(is_useful) and update confidence
-    avg_result = db.feedback.aggregate([
+
+    # 2. TRIGGER EQUIVALENT: Auto-compute AVG(is_useful) → update confidence
+    agg_result = list(db.feedback.aggregate([
         {"$match": {"match_id": match_id}},
         {"$group": {
             "_id": None,
             "avg_useful": {"$avg": {"$cond": ["$is_useful", 1, 0]}}
         }}
-    ]).next()
-    
-    db.similarity_matches.update_one(
-        {"match_id": match_id},
-        {"$set": {"confidence_score": avg_result["avg_useful"]}}
-    )
+    ]))
 
-# SQL Equivalent:
-# CREATE TRIGGER trg_after_feedback
-# AFTER INSERT ON Feedback
-# FOR EACH ROW
-# BEGIN
-#     UPDATE SimilarityMatch
-#     SET Confidence_Score = (
-#         SELECT AVG(Is_Useful) FROM Feedback
-#         WHERE Match_ID = NEW.Match_ID
-#     )
-#     WHERE Match_ID = NEW.Match_ID;
-# END;
+    if agg_result:
+        db.similarity_matches.update_one(
+            {"match_id": match_id},
+            {"$set": {"confidence_score": round(agg_result[0]["avg_useful"], 4)}}
+        )
 """, language="python")
+
+    st.markdown("**SQL Equivalent:**")
+    st.code("""
+-- SQL TRIGGER equivalent
+CREATE TRIGGER trg_after_feedback_insert
+AFTER INSERT ON Feedback
+FOR EACH ROW
+BEGIN
+    UPDATE SimilarityMatch
+    SET Confidence_Score = (
+        SELECT ROUND(AVG(CASE WHEN Is_Useful = TRUE THEN 1.0 ELSE 0.0 END), 4)
+        FROM Feedback
+        WHERE Match_ID = NEW.Match_ID
+    )
+    WHERE Match_ID = NEW.Match_ID;
+END;
+""", language="sql")
 
     st.divider()
 
     st.markdown("#### 2. View: Patient Similarity Dashboard")
-    st.markdown("*In SQL, this would be `CREATE VIEW`. In MongoDB, we use a multi-$lookup aggregation pipeline.*")
+    st.markdown("*In SQL, this would be `CREATE VIEW`. In MongoDB, we use a multi-`$lookup` aggregation pipeline in `service.py`.*")
     st.code("""
-# VIEW EQUIVALENT: patient_similarity_dashboard
-# Joins 4 collections: SimilarityMatch + PatientProfile (x2) + Prognosis + Feedback
+# ─── VIEW EQUIVALENT (from service.py → get_dashboard_view) ───
+# Joins 4 collections: SimilarityMatch + PatientProfile (×2) + Prognosis + Feedback
 
 pipeline = [
     # JOIN source patient
@@ -498,8 +509,8 @@ pipeline = [
         "as": "source"
     }},
     {"$unwind": "$source"},
-    
-    # JOIN matched patient  
+
+    # JOIN matched patient
     {"$lookup": {
         "from": "patient_profiles",
         "localField": "matched_patient_id",
@@ -507,15 +518,16 @@ pipeline = [
         "as": "matched"
     }},
     {"$unwind": "$matched"},
-    
-    # JOIN prognosis
+
+    # JOIN prognosis of matched patient
     {"$lookup": {
         "from": "prognosis",
         "localField": "matched_patient_id",
         "foreignField": "patient_id",
         "as": "prog"
     }},
-    
+    {"$unwind": {"path": "$prog", "preserveNullAndEmptyArrays": True}},
+
     # JOIN feedback
     {"$lookup": {
         "from": "feedback",
@@ -523,54 +535,130 @@ pipeline = [
         "foreignField": "match_id",
         "as": "fb"
     }},
-    
+
     # Sort + Project final columns
     {"$sort": {"similarity_score": -1}},
     {"$project": {
+        "_id": 0,
+        "match_id": 1,
         "source_id": "$source.patient_id",
+        "source_age": "$source.age",
+        "source_gender": "$source.gender",
         "matched_id": "$matched.patient_id",
+        "matched_age": "$matched.age",
+        "matched_gender": "$matched.gender",
         "similarity_score": 1,
+        "confidence_score": 1,
         "treatment": "$prog.treatment",
         "survival_rate": "$prog.survival_rate",
         "feedback_count": {"$size": "$fb"}
     }}
 ]
 
-# SQL Equivalent:
-# CREATE VIEW patient_similarity_dashboard AS
-# SELECT pp1.Patient_ID AS Source, pp2.Patient_ID AS Match,
-#        sm.Similarity_Score, pr.Treatment, pr.Survival_Rate,
-#        COUNT(f.Feedback_ID) AS Feedback_Count
-# FROM SimilarityMatch sm
-# JOIN PatientProfile pp1 ON sm.Source_Patient_ID = pp1.Patient_ID
-# JOIN PatientProfile pp2 ON sm.Matched_Patient_ID = pp2.Patient_ID
-# LEFT JOIN Prognosis pr ON pp2.Patient_ID = pr.Patient_ID
-# LEFT JOIN Feedback f ON sm.Match_ID = f.Match_ID
-# GROUP BY pp1.Patient_ID, pp2.Patient_ID
-# ORDER BY sm.Similarity_Score DESC;
+result = db.similarity_matches.aggregate(pipeline)
 """, language="python")
+
+    st.markdown("**SQL Equivalent:**")
+    st.code("""
+-- SQL VIEW equivalent
+CREATE VIEW vw_patient_similarity_dashboard AS
+SELECT
+    sm.Match_ID,
+    pp1.Patient_ID AS Source_ID,
+    pp1.Age AS Source_Age,
+    pp1.Gender AS Source_Gender,
+    pp2.Patient_ID AS Matched_ID,
+    pp2.Age AS Matched_Age,
+    pp2.Gender AS Matched_Gender,
+    sm.Similarity_Score,
+    sm.Confidence_Score,
+    pr.Treatment,
+    pr.Survival_Rate,
+    (SELECT COUNT(*) FROM Feedback f WHERE f.Match_ID = sm.Match_ID) AS Feedback_Count
+FROM SimilarityMatch sm
+JOIN PatientProfile pp1 ON sm.Source_Patient_ID = pp1.Patient_ID
+JOIN PatientProfile pp2 ON sm.Matched_Patient_ID = pp2.Patient_ID
+LEFT JOIN Prognosis pr ON pp2.Patient_ID = pr.Patient_ID
+ORDER BY sm.Similarity_Score DESC;
+""", language="sql")
 
     st.divider()
 
-    st.markdown("#### 3. Indexes (Performance Optimization)")
+    st.markdown("#### 3. Stored Procedure: Find Similar Patients")
+    st.markdown("*The `find_similar_patients()` function in `service.py` is the MongoDB equivalent of a SQL Stored Procedure.*")
+    st.code("""
+-- SQL STORED PROCEDURE equivalent of find_similar_patients()
+CREATE PROCEDURE sp_find_similar_patients(
+    IN p_source_id INT,
+    IN p_w_age DECIMAL(3,2),
+    IN p_w_severity DECIMAL(3,2),
+    IN p_w_gender DECIMAL(3,2),
+    IN p_w_blood DECIMAL(3,2)
+)
+BEGIN
+    -- Step 1: Get MIN/MAX for normalization
+    SELECT MIN(Age), MAX(Age) INTO @min_age, @max_age FROM PatientProfile;
+
+    -- Step 2: Get source patient
+    SELECT Age, Gender, Blood_Group INTO @src_age, @src_gender, @src_blood
+    FROM PatientProfile WHERE Patient_ID = p_source_id;
+
+    SELECT Severity_Level INTO @src_severity
+    FROM ClinicalCase WHERE Patient_ID = p_source_id LIMIT 1;
+
+    -- Step 3: Weighted Euclidean Distance
+    SELECT pp.Patient_ID, pp.Age, pp.Gender, pp.Blood_Group,
+           cc.Severity_Level,
+           ROUND(1.0 / (1.0 + SQRT(
+               p_w_age * POW(NORMALIZE(pp.Age) - NORMALIZE(@src_age), 2) +
+               p_w_severity * POW((cc.Severity_Level-1)/9.0 - (@src_severity-1)/9.0, 2) +
+               p_w_gender * POW(IF(pp.Gender = @src_gender, 0, 1), 2) +
+               p_w_blood * POW(IF(pp.Blood_Group = @src_blood, 0, 1), 2)
+           )), 4) AS Similarity_Score,
+           pr.Treatment, pr.Survival_Rate
+    FROM PatientProfile pp
+    JOIN ClinicalCase cc ON pp.Patient_ID = cc.Patient_ID
+    LEFT JOIN Prognosis pr ON pp.Patient_ID = pr.Patient_ID
+    WHERE pp.Patient_ID != p_source_id
+    ORDER BY Similarity_Score DESC
+    LIMIT 10;
+END;
+""", language="sql")
+
+    st.divider()
+
+    st.markdown("#### 4. Indexes (Performance Optimization)")
     st.code("""
 # MongoDB Indexes — equivalent to CREATE INDEX in SQL
+# (from collections.py → create_indexes)
 
 db.patient_profiles.create_index("patient_id", unique=True)
 db.clinical_cases.create_index("patient_id")
+db.clinical_cases.create_index("case_id", unique=True)
 db.prognosis.create_index("patient_id", unique=True)
+db.prognosis.create_index("prognosis_id", unique=True)
+db.similarity_algorithms.create_index("algo_id", unique=True)
+db.similarity_matches.create_index("match_id", unique=True)
 db.similarity_matches.create_index([("similarity_score", -1)])
 db.similarity_matches.create_index("source_patient_id")
+db.feedback.create_index("feedback_id", unique=True)
 db.feedback.create_index("match_id")
-
-# SQL Equivalent:
-# CREATE UNIQUE INDEX idx_patient_id ON PatientProfile(Patient_ID);
-# CREATE INDEX idx_clinical_patient ON ClinicalCase(Patient_ID);
-# CREATE UNIQUE INDEX idx_prognosis_patient ON Prognosis(Patient_ID);
-# CREATE INDEX idx_match_score ON SimilarityMatch(Similarity_Score DESC);
-# CREATE INDEX idx_match_source ON SimilarityMatch(Source_Patient_ID);
-# CREATE INDEX idx_feedback_match ON Feedback(Match_ID);
 """, language="python")
+
+    st.markdown("**SQL Equivalent:**")
+    st.code("""
+CREATE UNIQUE INDEX idx_patient_id ON PatientProfile(Patient_ID);
+CREATE INDEX idx_clinical_patient ON ClinicalCase(Patient_ID);
+CREATE UNIQUE INDEX idx_clinical_case ON ClinicalCase(Case_ID);
+CREATE UNIQUE INDEX idx_prognosis_patient ON Prognosis(Patient_ID);
+CREATE UNIQUE INDEX idx_prognosis_id ON Prognosis(Prognosis_ID);
+CREATE UNIQUE INDEX idx_algo_id ON SimilarityAlgorithm(Algo_ID);
+CREATE UNIQUE INDEX idx_match_id ON SimilarityMatch(Match_ID);
+CREATE INDEX idx_match_score ON SimilarityMatch(Similarity_Score DESC);
+CREATE INDEX idx_match_source ON SimilarityMatch(Source_Patient_ID);
+CREATE UNIQUE INDEX idx_feedback_id ON Feedback(Feedback_ID);
+CREATE INDEX idx_feedback_match ON Feedback(Match_ID);
+""", language="sql")
 
 
 # ─────────────────────── TAB 6: OUTPUT ───────────────────────

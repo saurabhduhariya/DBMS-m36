@@ -2,6 +2,7 @@
 import streamlit as st
 from components.sidebar import sidebar
 from components.charts import patient_line_chart, appointment_donut_chart
+from src.module_36.module_36_ui import module_36_page
 import matplotlib.pyplot as plt
 
 # All categories and their modules
@@ -78,13 +79,14 @@ CATEGORIES = {
         "title": "HR & Staff Management",
         "description": "Employee records, scheduling, and performance tracking",
         "icon": "👥",
-        "stats": {"modules": "5", "records": "5,240", "alerts": "2"},
+        "stats": {"modules": "6", "records": "5,240", "alerts": "2"},
         "modules": [
             ("F1", "Doctor & Staff Registry", "Employee database", 6, 2400),
             ("F2", "Shift Scheduling System", "Staff scheduling", 5, 8900),
             ("F3", "Attendance & Leave Management", "Time tracking", 4, 12100),
             ("F4", "Performance Evaluation", "Staff reviews", 3, 1800),
-            ("F5", "Training & Certification", "Credential tracking", 4, 940)
+            ("F5", "Training & Certification", "Credential tracking", 4, 940),
+            ("F6", "Similar Patient Case Retrieval System", "Find patients with similar clinical profiles using DBMS-based similarity matching", 6, 3200)
         ]
     },
     "G - Compliance & Security": {
@@ -355,6 +357,12 @@ def show_module_detail():
     code, name, desc, tables, records = st.session_state.selected_module
     cat_key = st.session_state.selected_category
     
+    # ── Module 36 (F6): Use custom implementation ──
+    if code == "F6":
+        module_36_page()
+        return
+    
+    # ── Generic module detail view for all other modules ──
     # Breadcrumb
     st.markdown(f"Category {cat_key.split('-')[0].strip()} > {name}")
     st.markdown(f"# {name}")
