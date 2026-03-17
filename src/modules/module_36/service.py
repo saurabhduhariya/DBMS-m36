@@ -2,8 +2,8 @@
 # Business logic for Module 36 — Similar Patient Case Retrieval System
 # All similarity computation uses MongoDB Aggregation Pipelines (pure DBMS, no ML)
 from datetime import datetime
-from src.module_36.database import get_db
-from src.module_36.collections import init_collections
+from src.modules.module_36.database import get_db
+from src.modules.module_36.collections import init_collections
 
 
 # ─────────────────────── INITIALIZATION ───────────────────────

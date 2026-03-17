@@ -1,7 +1,7 @@
 # src/module_36/collections.py
 # MongoDB collection setup: schemas, indexes, and seed data for Module 36
 from datetime import datetime
-from src.module_36.database import get_db
+from src.modules.module_36.database import get_db
 
 
 def create_indexes(db):

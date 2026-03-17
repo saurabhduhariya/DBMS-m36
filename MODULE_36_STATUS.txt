@@ -15,14 +15,14 @@ Algorithm: Weighted Euclidean Distance computed entirely inside MongoDB.
 2. WHAT HAS BEEN IMPLEMENTED (COMPLETE)
 ----------------------------------------
 
-  BACKEND (src/module_36/)
+  BACKEND (src/modules/module_36/)
   ├── __init__.py           — Package init
   ├── database.py           — MongoDB Atlas connection (singleton, reads .env)
   ├── collections.py        — 6 MongoDB collections + indexes + 20 patient seed data
   ├── service.py            — Core logic (9 functions, ~350 lines)
   └── queries.sql           — SQL equivalents for documentation/reference
 
-  FRONTEND (src/module_36/)
+  FRONTEND (src/modules/module_36/)
   └── module_36_ui.py       — Streamlit UI with 6 tabs (660 lines)
 
   DASHBOARD INTEGRATION
@@ -79,7 +79,7 @@ Algorithm: Weighted Euclidean Distance computed entirely inside MongoDB.
 
   ❌ ER Diagram Image       — Replace the text-based ER diagram with the actual
                               handwritten/drawn ER diagram image. Place it at
-                              src/module_36/er_diagram.png and update the
+                              src/modules/module_36/er_diagram.png and update the
                               ER Diagram tab in module_36_ui.py to use st.image().
 
   ❌ Error Handling          — Add try/except blocks around MongoDB operations

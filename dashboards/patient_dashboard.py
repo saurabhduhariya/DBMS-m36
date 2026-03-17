@@ -2,7 +2,7 @@
 import streamlit as st
 from components.sidebar import sidebar
 from components.charts import patient_line_chart, appointment_donut_chart
-from src.module_36.module_36_ui import module_36_page
+from src.modules.module_36.module_36_ui import module_36_page
 
 # All categories and their modules
 CATEGORIES = {

@@ -2,7 +2,7 @@
 # Streamlit UI for Module 36: Similar Patient Case Retrieval System
 import streamlit as st
 import matplotlib.pyplot as plt
-from src.module_36.service import (
+from src.modules.module_36.service import (
     init_db, get_all_patients, get_patient_detail,
     find_similar_patients, save_matches, submit_feedback,
     get_dashboard_view, get_statistics, get_collection_data
