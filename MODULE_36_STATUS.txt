@@ -1,0 +1,223 @@
+================================================================================
+  MODULE 36 — SIMILAR PATIENT CASE RETRIEVAL SYSTEM
+  Status Report & Teammate Handoff Guide
+  Last Updated: 17 March 2026
+================================================================================
+
+
+1. WHAT IS MODULE 36?
+---------------------
+A system that finds patients with similar clinical profiles using pure DBMS
+concepts (MongoDB Aggregation Pipelines). NO machine learning libraries used.
+Algorithm: Weighted Euclidean Distance computed entirely inside MongoDB.
+
+
+2. WHAT HAS BEEN IMPLEMENTED (COMPLETE)
+----------------------------------------
+
+  BACKEND (src/module_36/)
+  ├── __init__.py           — Package init
+  ├── database.py           — MongoDB Atlas connection (singleton, reads .env)
+  ├── collections.py        — 6 MongoDB collections + indexes + 20 patient seed data
+  ├── service.py            — Core logic (9 functions, ~350 lines)
+  └── queries.sql           — SQL equivalents for documentation/reference
+
+  FRONTEND (src/module_36/)
+  └── module_36_ui.py       — Streamlit UI with 6 tabs (660 lines)
+
+  DASHBOARD INTEGRATION
+  ├── doctor_dashboard.py   — F6 wired into Category F
+  └── patient_dashboard.py  — F6 wired into Category F
+
+  DEPENDENCIES
+  └── requirements.txt      — pymongo, python-dotenv added
+
+  ENVIRONMENT
+  └── .env                  — MongoDB Atlas connection string (DO NOT commit)
+
+  ── Backend Functions (service.py) ──
+  ✅ init_db()                — Seeds 20 patients, creates indexes
+  ✅ get_all_patients()       — Lists all patient profiles
+  ✅ get_patient_detail(pid)  — $lookup JOIN across 3 collections
+  ✅ get_collection_data()    — Generic collection reader
+  ✅ find_similar_patients()  — Aggregation pipeline (Weighted Euclidean Distance)
+  ✅ save_matches()           — Persists similarity results
+  ✅ submit_feedback()        — Stores feedback + trigger-equivalent confidence update
+  ✅ get_dashboard_view()     — Multi-$lookup VIEW equivalent
+  ✅ get_statistics()         — Aggregate stats ($avg, $count)
+
+  ── UI Tabs (module_36_ui.py) ──
+  ✅ 🏠 Home          — Overview, stats, DBMS concepts table, architecture
+  ✅ 🔗 ER Diagram    — Text-based ER diagram with relationships
+  ✅ 📋 Tables        — Live data from all 6 MongoDB collections
+  ✅ 🔍 SQL Query     — Interactive similarity search with weight sliders
+  ✅ ⚡ Triggers       — Trigger code + View code with SQL equivalents
+  ✅ 📊 Output        — Charts (similarity scores, treatments, survival rates)
+
+  ── DBMS Concepts Covered ──
+  ✅ CREATE TABLE (Collection + Schema Validation)
+  ✅ Indexes (create_index)
+  ✅ JOINs ($lookup)
+  ✅ Views (multi-$lookup aggregation)
+  ✅ Triggers (post-insert hook for confidence update)
+  ✅ Aggregate Functions ($avg, $sum, $group, $min, $max)
+  ✅ Math Functions ($sqrt, $pow, $subtract, $divide)
+  ✅ Normalization (MIN-MAX via $group + $addFields)
+  ✅ CRUD (find, insert_one, update_one)
+
+  ── MongoDB Collections (6 total) ──
+  1. patient_profiles     — Master patient data (age, gender, blood group, etc.)
+  2. clinical_cases       — Case records with severity levels
+  3. prognosis            — Treatment & survival rate data
+  4. similarity_algorithms — Algorithm registry
+  5. similarity_matches   — Computed similarity results
+  6. feedback             — Doctor feedback on match quality
+
+
+3. WHAT IS REMAINING (FOR TEAMMATES)
+-------------------------------------
+
+  ❌ ER Diagram Image       — Replace the text-based ER diagram with the actual
+                              handwritten/drawn ER diagram image. Place it at
+                              src/module_36/er_diagram.png and update the
+                              ER Diagram tab in module_36_ui.py to use st.image().
+
+  ❌ Error Handling          — Add try/except blocks around MongoDB operations
+                              in service.py for graceful error messages when
+                              MongoDB is unreachable.
+
+  ❌ Unit Tests              — Write tests for:
+                              - init_db() seeds correct number of records
+                              - find_similar_patients() returns ranked results
+                              - submit_feedback() updates confidence score
+                              - get_dashboard_view() joins correctly
+
+  ❌ MongoDB Atlas Setup     — The .env file needs the Atlas password.
+                              Ask the project owner (Saurabh) for the password
+                              and update your .env file accordingly.
+
+  ❌ Edge Cases              — Handle: empty database, patient not found,
+                              duplicate feedback submission, network timeouts.
+
+  ❌ UI Polish (Optional)    — Add loading spinners, better chart formatting,
+                              export results to CSV, print-friendly view.
+
+  ❌ Documentation PDF       — Generate a final submission PDF with:
+                              - ER diagram
+                              - Table structures
+                              - Sample queries + output screenshots
+                              - DBMS concepts mapping table
+
+
+4. HOW TO RUN THE PROJECT
+--------------------------
+
+  PREREQUISITES:
+  • Python 3.10+
+  • MongoDB Atlas password (ask Saurabh for it)
+
+  STEP-BY-STEP:
+
+  1. Clone the repo and cd into it:
+     $ cd Frontend
+
+  2. Create and activate virtual environment:
+     $ python3 -m venv venv
+     $ source venv/bin/activate          # Linux/Mac
+     $ source venv/bin/activate.fish     # Fish shell
+     $ venv\Scripts\activate             # Windows
+
+  3. Install dependencies:
+     $ pip install -r requirements.txt
+
+  4. Set up .env file (in the Frontend/ root):
+     Create a file called .env and paste the following:
+     ────────────────────────────────
+     MONGO_URI=mongodb+srv://kkpncc:<PASSWORD>@cluster0.yop9wgv.mongodb.net/
+     MONGO_DB=medicare_module36
+     ────────────────────────────────
+     ⚠️  Replace <PASSWORD> with the password shared by Saurabh.
+     ⚠️  DO NOT commit .env to Git!
+     ⚠️  The .env file is already in .gitignore.
+
+  5. Run the Streamlit app:
+     $ streamlit run app.py
+
+  6. Open browser at http://localhost:8501
+
+  7. Navigate to Module 36:
+     • Patient View: Sidebar → "F - Case-Based Decision Support" → Click F6
+
+  8. Initialize the database:
+     • Go to the 🏠 Home tab
+     • Click "🗄️ Initialize Database" button
+     • This seeds 20 patients + creates all indexes
+
+  9. Test similarity search:
+     • Go to 🔍 SQL Query tab
+     • Select a source patient
+     • Adjust weight sliders (age, severity, gender, blood group)
+     • Click "🚀 Find Similar Patients"
+     • Results appear ranked by similarity score
+
+  10. Test feedback:
+      • After running a similarity search
+      • Scroll to the feedback form
+      • Select a match, rate usefulness, add comments
+      • Submit — confidence score auto-updates (trigger equivalent)
+
+
+5. FILE STRUCTURE
+-----------------
+
+  Frontend/
+  ├── app.py                              # Main Streamlit entry point
+  ├── .env                                # MongoDB Atlas credentials (DO NOT COMMIT)
+  ├── requirements.txt                    # Python dependencies
+  ├── MODULE_36_STATUS.txt                # ← This file
+  │
+  ├── dashboards/
+  │   ├── doctor_dashboard.py             # Doctor view (F6 wired)
+  │   └── patient_dashboard.py            # Patient view (F6 wired)
+  │
+  ├── src/
+  │   ├── __init__.py
+  │   └── module_36/
+  │       ├── __init__.py
+  │       ├── database.py                 # MongoDB connection helper
+  │       ├── collections.py              # Collection schemas + seed data
+  │       ├── service.py                  # Business logic + aggregation pipelines
+  │       ├── queries.sql                 # SQL equivalent documentation
+  │       └── module_36_ui.py             # Streamlit UI (6 tabs)
+  │
+
+
+6. MONGODB ATLAS CONNECTION INFO
+-----------------------------------
+
+  Cluster:   cluster0.yop9wgv.mongodb.net
+  Username:  kkpncc
+  Password:  Ask Saurabh (project owner)
+  Database:  medicare_module36
+  
+  To connect via mongosh (for debugging):
+  $ mongosh "mongodb+srv://cluster0.yop9wgv.mongodb.net/" --apiVersion 1 --username kkpncc
+  (Enter password when prompted)
+
+  The app connects automatically via the .env file — no need to run mongosh
+  separately unless you want to inspect the database manually.
+
+
+7. CONTACT / NOTES
+--------------------
+  • The similarity algorithm uses Weighted Euclidean Distance — weights are
+    adjustable via sliders in the UI.
+  • All "intelligence" is computed inside MongoDB using Aggregation Pipelines.
+    No sklearn, numpy, or pandas.
+  • The queries.sql file contains the full SQL equivalents for academic reference.
+  • Linter errors about missing imports (pymongo, streamlit, etc.) are false
+    positives — they resolve at runtime within the activated venv.
+
+================================================================================
+  END OF STATUS REPORT
+================================================================================

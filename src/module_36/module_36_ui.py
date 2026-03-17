@@ -1,4 +1,4 @@
-# modules/module_36_ui.py
+# src/module_36/module_36_ui.py
 # Streamlit UI for Module 36: Similar Patient Case Retrieval System
 import streamlit as st
 import matplotlib.pyplot as plt
