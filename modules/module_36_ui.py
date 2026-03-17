@@ -170,29 +170,29 @@ def render_er_diagram_tab():
     ┌──────────────────────┐         ┌──────────────────────┐
     │    PatientProfile    │────1:1──│      Prognosis       │
     │──────────────────────│  (has)  │──────────────────────│
-    │ Patient_ID (PK)     │         │ Prognosis_ID (PK)    │
-    │ Age                 │         │ Patient_ID (FK)      │
-    │ Gender              │         │ Treatment            │
-    │ Blood_Group         │         │ Prognosis_Data       │
-    │ Address             │         │ Survival_Rate        │
-    │ Lifestyle_Data      │         └──────────┬───────────┘
-    └──────────┬───────────┘                   │
-               │ 1:N (exhibits)                │ 1:N (predicts)
-               ▼                               ▼
+    │ Patient_ID (PK)      │         │ Prognosis_ID (PK)    │
+    │ Age                  │         │ Patient_ID (FK)      │
+    │ Gender               │         │ Treatment            │
+    │ Blood_Group          │         │ Prognosis_Data       │
+    │ Address              │         │ Survival_Rate        │
+    │ Lifestyle_Data       │         └──────────┬───────────┘
+    └──────────┬───────────┘                    │
+               │ 1:N (exhibits)                 │ 1:N (predicts)
+               ▼                                ▼
     ┌──────────────────────┐         ┌──────────────────────┐
-    │    ClinicalCase      │──1:N───│   SimilarityMatch    │
+    │    ClinicalCase      │──1:N─── │   SimilarityMatch    │
     │──────────────────────│(analyzed│──────────────────────│
-    │ Case_ID (PK)        │  via)   │ Match_ID (PK)        │
-    │ Patient_ID (FK)     │         │ Source_Patient_ID (FK)│
-    │ Symptom_Vector      │         │ Matched_Patient_ID   │
-    │ Severity_Level      │         │ Similarity_Score     │
+    │ Case_ID (PK)         │  via)   │ Match_ID (PK)        │
+    │ Patient_ID (FK)      │         │ Source_Patient_ID(FK)│
+    │ Symptom_Vector       │         │ Matched_Patient_ID   │
+    │ Severity_Level       │         │ Similarity_Score     │
     └──────────────────────┘         │ Confidence_Score     │
                                      │ Algo_ID (FK)         │
     ┌──────────────────────┐         └──────────┬───────────┘
     │ SimilarityAlgorithm  │──N:1───┘           │
     │──────────────────────│(computes)          │ 1:N
-    │ Algo_ID (PK)        │                     │ (validated by)
-    │ Algo_Name           │                     ▼
+    │ Algo_ID (PK)         │                    │ (validated by)
+    │ Algo_Name            │                    ▼
     └──────────────────────┘         ┌──────────────────────┐
                                      │      Feedback        │
                                      │──────────────────────│
