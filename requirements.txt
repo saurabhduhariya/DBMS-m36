@@ -3,3 +3,5 @@ streamlit-option-menu
 matplotlib
 pymongo
 python-dotenv
+fastapi
+uvicorn
