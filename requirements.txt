@@ -3,5 +3,6 @@ streamlit-option-menu
 matplotlib
 pymongo
 python-dotenv
+mysql-connector-python
 fastapi
 uvicorn
