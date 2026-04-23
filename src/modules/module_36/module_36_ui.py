@@ -18,23 +18,7 @@ def module_36_page():
     st.markdown("# 🧬 Similar Patient Case Retrieval System")
     st.markdown("*Module 36 — Pure DBMS-based patient similarity matching*")
 
-    # Initialize DB button (one-time setup)
-    if "m36_initialized" not in st.session_state:
-        st.session_state.m36_initialized = False
-
-    if not st.session_state.m36_initialized:
-        st.warning("⚠️ Database not initialized. Click below to create collections and seed data.")
-        if st.button("🔄 Initialize Database", key="m36_init_btn"):
-            with st.spinner("Creating MongoDB collections and seeding data..."):
-                try:
-                    init_db()
-                    st.session_state.m36_initialized = True
-                    st.success("✅ Database initialized successfully! 20 patients seeded.")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ Error: {e}")
-                    st.info("Make sure MongoDB is running on localhost:27017")
-        return
+    # Database is permanently initialized via MongoDB Atlas
 
     # Tabs
     tab = st.radio(
@@ -59,16 +43,9 @@ def module_36_page():
         render_output_tab()
 
     st.divider()
-    col_back, col_reset = st.columns([1, 1])
-    with col_back:
-        if st.button("⬅ Back to Modules"):
-            st.session_state.view = "category"
-            st.rerun()
-    with col_reset:
-        if st.button("🔄 Reset Database"):
-            init_db()
-            st.success("Database reset!")
-            st.rerun()
+    if st.button("⬅ Back to Modules"):
+        st.session_state.view = "category"
+        st.rerun()
 
 
 # ─────────────────────── TAB 1: HOME ───────────────────────
